@@ -2,9 +2,12 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <stdbool.h>
 
-const char* DATA_DIR = "data";
-
+const char* DATA_DIR = "data/";
+#if 0
 enum FlagType {
 	FLAG_TYPE_NONE,
 	FLAG_TYPE_BOOL,
@@ -122,66 +125,58 @@ int parseArgSet(int argc, const char** argv) {
 		}
 	}
 }
+#endif
 
-void buildShape() {
+typedef struct {
+	int x;
+} ShapeModifier;
 
+
+bool buildShape(ShapeModifier* modifier, char* shape) {
+	bool ret = true;
 	int sourceFD;
 	int destFD;
-
-	sprintf(buf, "%s%s.obj", DATA_DIR, arg);
+	char buf[256] = {};
+	sprintf(buf, "%s%s.obj", DATA_DIR, shape);
 
 	sourceFD = open(buf, O_RDONLY | O_SYNC);
 	if(sourceFD == -1) {
-		printf("Failed to find object called %s\n", arg);
-		continue;
+		printf("Failed to find object called %s\n", shape);
+		ret = false;
+		goto closeSource;
 	}
 	off_t sourceFileSize = lseek(sourceFD, 0, SEEK_END);
 	char* sourceBuffer = malloc(sourceFileSize);
+	if(!sourceBuffer) {
+		ret = false;
+		goto freeSourceBuffer;
+	}
 	read(sourceFD, sourceBuffer, sourceFileSize);
 
-
-
-
-	sprintf(buf, "%s.obj", arg);
+	sprintf(buf, "%s.obj", shape);
 	destFD = open(buf, O_RDWR | O_CREAT | O_EXCL);
 	if(destFD == -1) {
 		printf("Failed to create new file %s\n", buf);
-		continue;
+		ret = false;
+		goto closeDest;
 	}
 
+closeDest:
+	close(destFD);
+freeSourceBuffer:
+	free(sourceBuffer);
+closeSource:
+	close(sourceFD);
+	
+	return ret;
 }
 
 int main(int argc, char** argv) {
 	char buf[256] = {};
 
-	for(int i = 0; i < argc; i++) {
+	for(int i = 1; i < argc; i++) {
 		char* arg = argv[i];
-		int sourceFD;
-		int destFD;
-
-		sprintf(buf, "%s%s.obj", DATA_DIR, arg);
-
-		sourceFD = open(buf, O_RDONLY | O_SYNC);
-		if(sourceFD == -1) {
-			printf("Failed to find object called %s\n", arg);
-			continue;
-		}
-		off_t sourceFileSize = lseek(sourceFD, 0, SEEK_END);
-		char* sourceBuffer = malloc(sourceFileSize);
-		read(sourceFD, sourceBuffer, sourceFileSize);
-
-
-
-
-		sprintf(buf, "%s.obj", arg);
-		destFD = open(buf, O_RDWR | O_CREAT | O_EXCL);
-		if(destFD == -1) {
-			printf("Failed to create new file %s\n", buf);
-			continue;
-		}
-
-
-
+		buildShape(NULL, arg);
 	}
 	printf("hello world\n");
 }
