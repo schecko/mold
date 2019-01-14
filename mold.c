@@ -164,7 +164,7 @@ bool buildShape(ShapeModifier* modifier, char* shape) {
 closeDest:
 	close(destFD);
 freeSourceBuffer:
-	free(sourceBuffer);
+	if (sourceBuffer) free(sourceBuffer);
 closeSource:
 	close(sourceFD);
 	

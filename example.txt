@@ -1,0 +1,27 @@
+
+$ mold sphere
+	behaviour: Should create an obj file named sphere.obj in the current working directory.
+		The sphere should have a radius of 0.5 units.
+
+$ mold box
+	behaviour: Should create an obj file named box.obj in the current working directory.
+		The box should have an edge length of 1.0 units
+
+$ mold --rotate 30 30 30 box
+	behaviour: Should create an obj file named box.obj in the current working directory.
+		The box should have an edge length of 1.0 units, and be rotated on all axis by 30 degrees.
+		TODO should radius be the default? If so, should the notation for degrees be 30d in this example?
+	alternate syntax:
+		$ mold -r 30 30 30 box
+
+$ mold --translate 1 2 3 box
+	behaviour: Should create an obj file named box.obj in the current working directory.
+		The box should be translated to the coordinates <x> <y> <z>.
+	alternate syntax:
+		$ mold -t 1 2 3 box
+
+$ mold sphere --latitude 3 --longitude 3
+	behaviour: Should create an obj file named sphere in the current working directory.
+		The granularity of the sphere will be 3 rects down and 3 rects across.
+
+$ mold 
