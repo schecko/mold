@@ -7,7 +7,6 @@
 #include <stdbool.h>
 
 const char* DATA_DIR = "data/";
-#if 0
 enum FlagType {
 	FLAG_TYPE_NONE,
 	FLAG_TYPE_BOOL,
@@ -17,12 +16,88 @@ enum FlagType {
 	FLAG_TYPE_VEC4
 };
 
+typedef int(*FlagOperation)(Transform* inoutTransform, const char** params);
+
 struct Flag {
 	char* name;
 	char* message;
 	char terse;
+	FlagOperation op;
 	Flag* mods;
 };
+
+bool checkNumeric(char* str) {
+	while(*str) {
+		if(!((str >= '0' && str <= '9') || (str == '.'))) {
+			return false;
+		}
+		str++;
+	}
+	return true;
+}
+
+int parseRotate(Transform* inoutTransform, const char** params) {
+	if(!params) return 0;
+	if(!params[0]) return 0;
+	
+	int current = 0;
+	float rotation[3] = {};
+	for(int i = 0; i < 3; i++) {
+		if(checkNumeric(*params)) {
+			float temp = atof(*params);
+			rotation[current++] = temp;
+		} else {
+			break;
+		}
+
+		if(current >= 3) break;
+	}
+	// overwrite any previous rotation i guess...
+	*inoutTransform.rotation = rotation;
+	return current;
+}
+
+int parseScale(Transform* transform, const char** params) {
+	if(!params) return 0;
+	if(!params[0]) return 0;
+	
+	int current = 0;
+	float scale[3] = {};
+	for(int i = 0; i < 3; i++) {
+		if(checkNumeric(*params)) {
+			float temp = atof(*params);
+			scale[current++] = temp;
+		} else {
+			break;
+		}
+
+		if(current >= 3) break;
+	}
+	// overwrite any previous scale i guess...
+	*inoutTransform.scale = scale;
+	return current;
+}	
+
+int parseOffset(Transform* transform, const char** params) {
+	if(!params) return 0;
+	if(!params[0]) return 0;
+	
+	int current = 0;
+	float offset[3] = {};
+	for(int i = 0; i < 3; i++) {
+		if(checkNumeric(*params)) {
+			float temp = atof(*params);
+			offset[current++] = temp;
+		} else {
+			break;
+		}
+
+		if(current >= 3) break;
+	}
+	// overwrite any previous offset i guess...
+	*inoutTransform.offset = offset;
+	return current;
+}	
 
 Flag flags[] = {
 	{
@@ -30,6 +105,7 @@ Flag flags[] = {
 		.message = "Rotate the object",
 		.terse = 'r',
 		.type = FLAG_TYPE_VEC3,
+		.op = parseRotate,
 		.mods = {
 			{
 				.name = "local",
@@ -53,6 +129,7 @@ Flag flags[] = {
 		.message = "Scale the object",
 		.terse = 's',
 		.type = FLAG_TYPE_INT,
+		.op = parseScale,
 		.mods = NULL
 	},
 	{
@@ -60,6 +137,7 @@ Flag flags[] = {
 		.message = "Translate the object",
 		.terse = 'o',
 		.type = FLAG_TYPE_FLOAT,
+		.op = parseOffset,
 		.mods = NULL
 	},
 	NULL
@@ -75,6 +153,24 @@ struct Value {
 		float v4[4];
 	}
 };
+
+
+Transform parseTransform() {
+	switch(expectedType) {
+		case FLAG_TYPE_BOOL:
+			break;
+		case FLAG_TYPE_INT:
+			break;
+		case FLAG_TYPE_FLOAT:
+			break;
+		case FLAG_TYPE_VEC3:
+			break;
+		case FLAG_TYPE_VEC4:
+			break;
+		default:
+			break;
+	}
+}
 
 Value parseValue(int argc, char** argv, FlagType expectedType) {
 	switch(expectedType) {
@@ -98,34 +194,52 @@ char* findEndOfArg(char* arg) {
 	return arg;
 }
 
-
-
 struct ArgSet {
 	int numArgs;
 	char* shape;
 }
 
-int parseArgSet(int argc, const char** argv) {
+struct Transform {
+	float offset[3];
+	float rotation[3];
+	float scale[3];
+}
+
+Transform parseArgSet(int argc, const char** argv) {
+	Transform transform = {};
 	int i = 0;
 	for(; i < argc; i++) {
 		char* arg = argv[i];
+		// todo mod flags
 		if(arg[0] == '-' && arg[1] == '-') {
-			// this arg is full name
-			Flag* tempFlags = flags;
-			while(*tempFlags) {
-				if(strcmp(&arg[2], tempFlags.name) == 0) {
+			// this is a full name flag
+			Flag* flag = flags;
+			while(*flag) {
+				if(strcmp(&arg[2], flag.name) == 0) {
+					int used = flag.op(&transform, argv[i + 1]);
+					i += used;
+					break;
 				}
-				tempFlags++;
+				flag++;
 			}
 		} else if(arg[0] == '-') {
 			// this is a terse flag
+			Flag* flag = flags;
+			while(*flag) {
+				if(arg[1] == flag.terse) {
+					int used = flag.op(&transform, argv[i + 1]);
+					i += used;
+					break;
+				}
+				flag++;
+			}
 		} else {
 			// this is a model/shape or end of args
 			break;	
 		}
 	}
+	return transform;
 }
-#endif
 
 typedef struct {
 	int x;
@@ -173,7 +287,7 @@ closeSource:
 
 int main(int argc, char** argv) {
 	char buf[256] = {};
-
+	Transform globalTransform = parseArgSet(argc, argv); 
 	for(int i = 1; i < argc; i++) {
 		char* arg = argv[i];
 		buildShape(NULL, arg);
