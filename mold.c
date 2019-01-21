@@ -8,6 +8,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include <gsl/gsl_vector.h>
+
 const char* DATA_DIR = "data/";
 typedef enum FlagType {
 	FLAG_TYPE_NONE,
@@ -18,29 +20,25 @@ typedef enum FlagType {
 	FLAG_TYPE_VEC4
 } FlagType;
 
-typedef struct v3 {
-	float a[3];
-} v3;
-
-
 typedef struct Transform {
-	v3 offset;
-	v3 rotation;
-	v3 scale;
+	gsl_vector* offset;
+	gsl_vector* rotation;
+	gsl_vector* scale;
 } Transform;
 
 Transform initTransform() {
 	Transform ret = {};
-	ret.scale.a[0] = 1.0;
-	ret.scale.a[1] = 1.0;
-	ret.scale.a[2] = 1.0;
+	ret.offset = gsl_vector_calloc(3);
+	ret.rotation = gsl_vector_calloc(3);
+	ret.scale = gsl_vector_alloc(3);
+	gsl_vector_set_all(ret.scale, 1.0f);
 	return ret;
 }
 
 void printTransform(Transform* transform) {
-	printf("offset: %f %f %f\n", transform->offset.a[0], transform->offset.a[1], transform->offset.a[2]); 
-	printf("scale: %f %f %f\n", transform->scale.a[0], transform->scale.a[1], transform->scale.a[2]); 
-	printf("rotation: %f %f %f\n", transform->rotation.a[0], transform->rotation.a[1], transform->rotation.a[2]); 
+	gsl_vector_fprintf(stdout, transform->offset, "%f");
+	gsl_vector_fprintf(stdout, transform->scale, "%f");
+	gsl_vector_fprintf(stdout, transform->rotation, "%f");
 }
 
 typedef int(*FlagOperation)(Transform* inoutTransform, const char** params);
@@ -69,11 +67,11 @@ int parseRotate(Transform* inoutTransform, const char** params) {
 	if(!params[0]) return 0;
 	
 	int current = 0;
-	v3 rotation = {};
+	gsl_vector* rotation = gsl_vector_calloc(3);
 	for(int i = 0; i < 3; i++) {
 		if(checkNumeric(*params)) {
 			float temp = atof(*params);
-			rotation.a[current++] = temp;
+			gsl_vector_set(rotation, current++, temp);
 		} else {
 			break;
 		}
@@ -81,7 +79,8 @@ int parseRotate(Transform* inoutTransform, const char** params) {
 		if(current >= 3) break;
 	}
 	// overwrite any previous rotation i guess...
-	inoutTransform->rotation = rotation;
+	gsl_vector_memcpy(inoutTransform->rotation, rotation);
+	gsl_vector_free(rotation);
 	return current;
 }
 
@@ -90,11 +89,11 @@ int parseScale(Transform* inoutTransform, const char** params) {
 	if(!params[0]) return 0;
 	
 	int current = 0;
-	v3 scale = {{ 1, 1, 1 }};
+	gsl_vector* scale = gsl_vector_calloc(3);
 	for(int i = 0; i < 3; i++) {
 		if(checkNumeric(*params)) {
 			float temp = atof(*params);
-			scale.a[current++] = temp;
+			gsl_vector_set(scale, current++, temp);
 		} else {
 			break;
 		}
@@ -103,11 +102,12 @@ int parseScale(Transform* inoutTransform, const char** params) {
 	}
 	// scale all axis' if x,y arent set.
 	if(current == 1) {
-		scale.a[1] = scale.a[0];
-		scale.a[2] = scale.a[0];
+		gsl_vector_set(scale, 1, gsl_vector_get(scale, 0));
+		gsl_vector_set(scale, 2, gsl_vector_get(scale, 0));
 	}
 	// overwrite any previous scale i guess...
-	inoutTransform->scale = scale;
+	gsl_vector_memcpy(inoutTransform->scale, scale);
+	gsl_vector_free(scale);
 	return current;
 }	
 
@@ -116,11 +116,11 @@ int parseOffset(Transform* inoutTransform, const char** params) {
 	if(!params[0]) return 0;
 	
 	int current = 0;
-	v3 offset = {};
+	gsl_vector* offset = gsl_vector_calloc(3);
 	for(int i = 0; i < 3; i++) {
 		if(checkNumeric(*params)) {
 			float temp = atof(*params);
-			offset.a[current++] = temp;
+			gsl_vector_set(offset, current++, temp);
 		} else {
 			break;
 		}
@@ -128,7 +128,8 @@ int parseOffset(Transform* inoutTransform, const char** params) {
 		if(current >= 3) break;
 	}
 	// overwrite any previous offset i guess...
-	inoutTransform->offset = offset;
+	gsl_vector_memcpy(inoutTransform->offset, offset);
+	gsl_vector_free(offset);
 	return current;
 }	
 

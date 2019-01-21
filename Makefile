@@ -2,7 +2,7 @@ src = $(wildcard *.c)
 obj = $(src:.c=.o)
 
 mold: $(obj)
-	$(CC) -o $@ $^
+	$(CC) -L/usr/local/lib -o $@ $^ -lgsl -lgslcblas
 
 default: all
 all: mold
