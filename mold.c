@@ -281,8 +281,8 @@ int main(int argc, char** argv) {
 	int numParsed = 0;
 	int totalNumParsed = 0;
 	ArgSet set = {};
-	set.argc = argc;
-	set.argv = argv;
+	set.argc = argc - 1; // ignore the name of the binary..
+	set.argv = argv + 1;
 	// the first argset is the global transform
 	Transform globalTransform = parseArgSet(&set, &numParsed); 
 	totalNumParsed += numParsed;
